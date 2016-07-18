@@ -41,8 +41,6 @@
 /************************************************************************************/
 
 #include "rule_based_features.h"
-//#include "hts_data_collector.h"
-
 
 /************************************************************************************/
 /*                                                                                  */
@@ -79,11 +77,6 @@ static SRuleBasedFeaturesUttProcClass RuleBasedFeaturesUttProcClass;
 /* Plug-in class registration/free                                                  */
 /*                                                                                  */
 /************************************************************************************/
-
-/* FIRST TASK:
-   - controllare il pos tag attuale, dire se è nella lista nouns0
-   - controllare pos tag nella word precedente, e dire se è W
-*/
 
 /* local functions to register and free classes */
 S_LOCAL void _s_rule_based_features_class_reg(s_erc *error)
@@ -161,13 +154,26 @@ static s_bool searchStringList(SList *list, char *str, s_erc *error)
 	while (itrList != NULL && found == FALSE)
 	{
 		SObject *curObj = SIteratorObject(itrList, error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "searchStringList",
+				  "Call to \"SIteratorObject\" failed"))
+			return FALSE;
+
 		const char *curStr = SObjectGetString(curObj, error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "searchStringList",
+				  "Call to \"SIteratorGetString\" failed"))
+			return FALSE;
 
 		if (s_strcmp(str, curStr, error) == 0)
 		{
 			found = TRUE;
 		}
 		itrList = SIteratorNext(itrList);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "searchStringList",
+				  "Call to \"SIteratorNext\" failed"))
+			return FALSE;
 	}
 
 	if (itrList != NULL)
@@ -255,7 +261,6 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
 
 	else if (posTagStr[0] == 'S')
 	{
-		/* check for at least 3 characters */
 		if ((posTagStr[1] == 'm' || posTagStr[1] == 'f' || posTagStr[1] == 'n') &&
 			(posTagStr[2] == 'p' || posTagStr[2] == 's' || posTagStr[2] == 'm'))
 		{
@@ -291,116 +296,100 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
 		filteredPosTagStr[i] = '\0';
 	}
 
-	//fprintf(stderr, "%s\n", filteredPosTagStr);
 	return filteredPosTagStr;
 }
 
-        /**
-         * determination of sentence type values: decl, excl, interrog, interrogYN or interrogW
-         */
 
-/* getSentenceType is made out of two parts:
+/* setSentenceType should be made out of two parts:
  * 	    1) the first section searchs for the last punctuation element of the sentence
  * 				-> if it is a '.' --> set "decl" type (where should I set this feature value?)
  * 				-> if it is a '!' --> set "excl" type (where should I set this feature value?)
  * 				-> if it is a '?' --> set "interrog" type (where should I set this feature value?)
- * 		2) if the first part decides for "interrog" type, there should be other controls
- * 		   to establish the sentence's subtype
+ * 	    2) if the first part decides for "interrog" type, there should be other controls
+ * 	       to establish the sentence's complete type
  * */
-
 static void setSentenceType(const SItem *phrase, s_erc *error)
 {
 	S_CLR_ERR(error);
 
 	/* types: "decl, "excl", "interrog" */
 	/* stop at sentence's last token */
-	/* keep track of the previous-to-current token each iteration */
 	SItem *wordFromCurrentPhrase = SItemPathToItem(phrase, "daughter", error);
+	if (S_CHK_ERR(error, S_CONTERR,
+				  "setSentenceType",
+				  "Call to \"SItemPathToItem\" failed"))
+			return FALSE;
+
 	SItem *wordAsToken = SItemAs(wordFromCurrentPhrase, "Token", error);
+	if (S_CHK_ERR(error, S_CONTERR,
+				  "setSentenceType",
+				  "Call to \"SItemAs\" failed"))
+			return FALSE;
+
 	SItem *tokenItem = SItemParent(wordAsToken, error);
 
 
 	s_bool isPunct = SItemFeatureIsPresent(tokenItem, "IsPunctuation", error);
+	if (S_CHK_ERR(error, S_CONTERR,
+				  "setSentenceType",
+				  "Call to \"SItemFeatureIsPresent\" failed"))
+			return FALSE;
+
 	s_bool isFinalPunct = FALSE;
 
 	while (isFinalPunct == FALSE)
 	{
 		isPunct = SItemFeatureIsPresent(tokenItem, "IsPunctuation", error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "setSentenceType",
+				  "Call to \"SItemFeatureIsPresent\" failed"))
+			return FALSE;
 
 		if (isPunct)
 		{
 			const char *punctStr = SItemGetName(tokenItem, error);
+			if (S_CHK_ERR(error, S_CONTERR,
+					"setSentenceType",
+					"Call to \"SItemGetName\" failed"))
+				return FALSE;
 
 			if (s_strcmp(punctStr, ".", error) == 0)
 			{
-				fprintf(stderr, "\".\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "decl", error);
+				if (S_CHK_ERR(error, S_CONTERR,
+						"setSentenceType",
+						"Call to \"SItemSetString\" failed"))
+					return FALSE;
 			}
 			else if (s_strcmp(punctStr, "!", error) == 0)
 			{
-				fprintf(stderr, "\"!\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "excl", error);
+				if (S_CHK_ERR(error, S_CONTERR,
+						"setSentenceType",
+						"Call to \"SItemSetString\" failed"))
+				    return FALSE;
 			}
 			else if (s_strcmp(punctStr, "?", error) == 0)
 			{
-				fprintf(stderr, "\"?\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "interrog", error);
+				if (S_CHK_ERR(error, S_CONTERR,
+						"setSentenceType",
+						"Call to \"SItemSetString\" failed"))
+				    return FALSE;
 			}
 		}
 
 		tokenItem = SItemNext(tokenItem, error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "setSentenceType",
+				  "Call to \"SItemNext\" failed"))
+			return FALSE;
+
     }
 }
-
-/*protected String getSentenceType(NodeList tokens) {
-	String sentenceType = "decl";
-
-	for (int i = tokens.getLength() - 1; i >= 0; i--) { // search for sentence finishing punctuation mark
-				Element t = (Element) tokens.item(i);
-				String punct = MaryDomUtils.tokenText(t);
-				if (punct.equals(".")) {
-							sentenceType = "decl";
-							break;
-				} else if (punct.equals("!")) {
-							sentenceType = "excl";
-							break;
-				} else if (punct.equals("?")) {
-							sentenceType = "interrog";
-							break;
-				}
-	}
-
-	if (sentenceType.equals("interrog")) {
-			for (int i = 0; i < tokens.getLength() - 1; i++) { // search for the first word in sentence
-						Element t = (Element) tokens.item(i);
-						if (!t.getAttribute("ph").equals("")) {
-								Element firstToken = (Element) tokens.item(i);
-								// To check for italian
-								// setInterrogYN contains possible part of speechs of first word in yes-no question
-								Set<String> setInterrogYN = (Set<String>) listMap.get("firstPosInQuestionYN");
-								// setInterrogW contains possible part of speechs of first word in wh-question
-								Set<String> setInterrogW = (Set<String>) listMap.get("firstPosInQuestionW");
-
-								String posFirstWord = OpenNLPPosTagger.getReducedPOS(firstToken.getAttribute("pos"));
-								if (setInterrogYN != null && setInterrogYN.contains(posFirstWord)) {
-											// TOCHECK: Global interrogative
-											sentenceType = "interrogYN";
-
-								}
-								if (setInterrogW != null && setInterrogW.contains(posFirstWord)) {
-										// TOCHECK: Partial interrogative
-										sentenceType = "interrogW";
-								}
-								break;
-						}
-					}
-	}
-                return sentenceType;
-}
-*/
 
 static void Run(const SUttProcessor *self, SUtterance *utt,
 					s_erc *error)
@@ -418,7 +407,10 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 
 	/* 'valueList' is used to represent JSON value lists for each
 	   entry in 'list definitions' map:
-	   e.g.) ["S","SP"] or ["è","ha","ho"] or ["A","B","I","N","NO","S","SA","SP","SW","V","X"] */
+	   e.g.) - ["S","SP"]
+	         - ["è","ha","ho"]
+	         - ["A","B","I","N","NO","S","SA","SP","SW","V","X"]
+	 */
 	const SList *valueList = NULL;
 	char *itemFromValueList;
 
@@ -442,8 +434,6 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				  "Failed to get 'list definitions' SMap feature"))
 		goto quit_error;
 
-
-
 	wordRel = SUtteranceGetRelation(utt, "Token", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
@@ -462,41 +452,46 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				  "Call to \"SRelationHead\" failed"))
 		goto quit_error;
 
-	/* most likely I need a loop on phraseItem(s)
-	 * to set the feature "type" for sentences
-	 * */
-
 	SItem* phraseItem_copy = phraseItem;
-	while (phraseItem != NULL)
-	{
-	   setSentenceType(phraseItem, error);
-	   phraseItem = SItemNext(phraseItem, error);
-	}
-
-
 	while (phraseItem_copy != NULL)
 	{
-		char *phrase_type = SItemGetString(phraseItem_copy, "type", error);
-		fprintf(stderr, "This phrase's type is: %s\n", phrase_type);
-		phraseItem_copy = SItemNext(phraseItem_copy, error);
+	   setSentenceType(phraseItem_copy, error);
+	   if (S_CHK_ERR(error, S_CONTERR,
+				  "Run",
+				  "Call to \"setSentenceType\" failed"))
+			goto quit_error;
+
+	   phraseItem_copy = SItemNext(phraseItem_copy, error);
+	   if (S_CHK_ERR(error, S_CONTERR,
+				  "Run",
+				  "Call to \"SItemNext\" failed"))
+			goto quit_error;
 	}
 
-    exit(1);
-	/* try to loop on phraseItem, and
+	/* loop on phraseItem, and
 	 * get the tokens for each phrase inside an inner loop,
-	 * looking at puncutation mark */
+	 * looking at puncutation marks 
+         */
 	while (phraseItem != NULL)
 	{
-
-		char *phrase_type = SItemGetString(phraseItem, "type", error);
-		fprintf(stderr, "This phrase's type is: %s\n", phrase_type);
-
-
-		/* should I call 'getSentenceType' on 'phraseItem'
-		 * at each iteration? */
+		/* call 'getSentenceType' on 'phraseItem'
+		 * at each iteration 
+                 */
 		SItem *wordFromCurrentPhrase = SItemPathToItem(phraseItem, "daughter", error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "Run",
+				  "Call to \"SItemPathToItem\" failed"))
+			return FALSE;
 		SItem *wordAsToken = SItemAs(wordFromCurrentPhrase, "Token", error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "Run",
+				  "Call to \"SItemAs\" failed"))
+			return FALSE;
 		SItem *tokenItem = SItemParent(wordAsToken, error);
+		if (S_CHK_ERR(error, S_CONTERR,
+				  "Run",
+				  "Call to \"SItemParent\" failed"))
+			return FALSE;
 
 		/* I need a loop that stops at phraseItem-pointed phrase's final token */
 		s_bool isStopPunct = FALSE;
@@ -518,9 +513,9 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				/* ******************************* */
 				/* FIRST RULE:
 				*  if the current word item's pos value is contained in the list
-				*  "pos_tonal_accent" from "list definitions" map -> then -->
-				* 		set current's item "accent" attribute to the value "tone"
-				*/
+				*  "pos_tonal_accent" from "list definitions",
+				* 		then -->	set current's item "accent" attribute to the value "tone"
+				 */
 
 				/* check if we have 'pos_tonal_accent' symbol */
 				have_symbols = SMapObjectPresent(prosSymbols, "pos_tonal_accent", error);
@@ -546,7 +541,8 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 					goto quit_error;
 
 				/* filter the current POS tag, remember to free the memory
-				* pointed to by 'posValueStr_filtered' pointer */
+				 *  pointed to by 'posValueStr_filtered' pointer 
+                                 */
 				posValueStr_filtered = filterPosTag(posValueStr, error);
 				if (S_CHK_ERR(error, S_CONTERR,
 						"Run",
@@ -569,13 +565,12 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 					S_FREE(posValueStr_filtered);
 				}
 
-
 				/* ******************************* */
 				/* SECOND RULE:
-				*  if the current word item's pos value is contained in the list
-				*  "pos_no_accent" from "list definitions" map -> then -->
-				* 		set current's item "accent" attribute to the value ""
-				*/
+				 *  if the current word item's pos value is contained in the list
+				 *  "pos_no_accent" from "list definitions" map,
+				 * 		then -->	set current's item "accent" attribute to the value ""
+				 */
 
 				have_symbols = SMapObjectPresent(prosSymbols, "pos_no_accent", error);
 				if (S_CHK_ERR(error, S_CONTERR,
@@ -600,7 +595,8 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 					goto quit_error;
 
 				/* filter the current POS tag, remember to free the memory
-				* pointed to by 'posValueStr_filtered' pointer */
+				 *  pointed to by 'posValueStr_filtered' pointer
+			         */
 				posValueStr_filtered = filterPosTag(posValueStr, error);
 				if (S_CHK_ERR(error, S_CONTERR,
 						"Run",
@@ -621,8 +617,8 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				{
 					/* ******************************* */
 					/* THIRD RULE:
-					*   set "accent" feature to ""
-					*/
+					 *   otherwise set "accent" feature to ""
+					 */
 					SItemSetString(tokenItem, "accent", "", error);
 					if (S_CHK_ERR(error, S_CONTERR,
 							"Run",
@@ -634,20 +630,42 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				{
 					S_FREE(posValueStr_filtered);
 				}
+
+				/* ********************************** */
+				/* FOURTH RULE:
+				 *    * if the current word item is contained in a phrase with 
+				           type = "decl" && if "prosodicPosition"'s type == "prenuclear" && accent = "tone"
+				 * 			----> then set accent = "L+H*"
+				 *
+				 *    * else if the current word item is contained in a phrase with 
+					   type = "decl" && if "prosodicPosition"'s type == "nuclearNonParagraphFinal" && accent = "tone"
+				 * 			----> then set accent = "!H*"
+				 *    NOTE: "prosodicPosition" feature is not currently available on Speect
+				 */
+
 			}
 
 			/* END OF RULES SECTION */
 
 			/* ****************************** */
 			/* checks for inner loop */
-			/* THESE CONTROLS MAKE WHAT getSenteceType should do */
 			s_bool isPunct = SItemFeatureIsPresent(tokenItem, "IsPunctuation", error);
+			if (S_CHK_ERR(error, S_CONTERR,
+					"Run",
+					"Call to \"SItemFeatureIsPresent\" failed"))
+				return FALSE;
 
 			if (isPunct)
 			{
 				/* get the punctation mark as a string and
-				 * set isStopPunct flag if it is ".", "?" or "!" */
+				 * set isStopPunct flag if it is ".", "?" or "!" 
+				 */
 				const char *punctStr = SItemGetName(tokenItem, error);
+				if (S_CHK_ERR(error, S_CONTERR,
+						"Run",
+						"Call to \"SItemGetName\" failed"))
+					return FALSE;
+
 				if (s_strcmp(punctStr, ".", error) == 0 || s_strcmp(punctStr, "?", error) == 0 ||
 							s_strcmp(punctStr, "!", error) == 0)
 				{
@@ -658,9 +676,11 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 			tokenItem = SItemNext(tokenItem, error);
 		}
 
-
 		phraseItem = SItemNext(phraseItem, error);
-		fprintf(stderr, "\n\n");
+		if (S_CHK_ERR(error, S_CONTERR,
+					"Run",
+					"Call to \"SItemNext\" failed"))
+				return FALSE;
 	}
 
 	/* error cleanup */
