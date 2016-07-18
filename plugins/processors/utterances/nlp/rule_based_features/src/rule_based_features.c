@@ -282,7 +282,13 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
 
 	else
 	{
-		filteredPosTagStr[0] = '\0';
+		int i = 0;
+		while (posTagStr[i] != '\0')
+		{
+			filteredPosTagStr[i] = posTagStr[i];
+			i++;
+		}
+		filteredPosTagStr[i] = '\0';
 	}
 
 	//fprintf(stderr, "%s\n", filteredPosTagStr);
@@ -325,18 +331,21 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 		{
 			const char *punctStr = SItemGetName(tokenItem, error);
 
-			if (s_strcmp(punctStr, ".", error))
+			if (s_strcmp(punctStr, ".", error) == 0)
 			{
+				fprintf(stderr, "\".\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "decl", error);
 			}
-			else if (s_strcmp(punctStr, "!", error))
+			else if (s_strcmp(punctStr, "!", error) == 0)
 			{
+				fprintf(stderr, "\"!\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "excl", error);
 			}
-			else if (s_strcmp(punctStr, "?", error))
+			else if (s_strcmp(punctStr, "?", error) == 0)
 			{
+				fprintf(stderr, "\"?\" CASE\n");
 				isFinalPunct = TRUE;
 				SItemSetString(phrase, "type", "interrog", error);
 			}
@@ -458,18 +467,31 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 	 * */
 
 	SItem* phraseItem_copy = phraseItem;
+	while (phraseItem != NULL)
+	{
+	   setSentenceType(phraseItem, error);
+	   phraseItem = SItemNext(phraseItem, error);
+	}
+
 
 	while (phraseItem_copy != NULL)
 	{
-	    setSentenceType(phraseItem_copy, error);
+		char *phrase_type = SItemGetString(phraseItem_copy, "type", error);
+		fprintf(stderr, "This phrase's type is: %s\n", phrase_type);
 		phraseItem_copy = SItemNext(phraseItem_copy, error);
 	}
 
+    exit(1);
 	/* try to loop on phraseItem, and
 	 * get the tokens for each phrase inside an inner loop,
 	 * looking at puncutation mark */
 	while (phraseItem != NULL)
 	{
+
+		char *phrase_type = SItemGetString(phraseItem, "type", error);
+		fprintf(stderr, "This phrase's type is: %s\n", phrase_type);
+
+
 		/* should I call 'getSentenceType' on 'phraseItem'
 		 * at each iteration? */
 		SItem *wordFromCurrentPhrase = SItemPathToItem(phraseItem, "daughter", error);
@@ -531,23 +553,10 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 						"Call to \"filterPosTag\" failed"))
 					goto quit_error;
 
-
-
-				/* ####################################### */
-				fprintf(stderr, "%s\t%s\n", posValueStr, posValueStr_filtered);
-				/* #######################################*/
-
-
 				/* check if the current POS tag exists in 'pos_tonal_accent' list */
 				currPosInCurrList = searchStringList(valueList, posValueStr_filtered, error);
 				if (currPosInCurrList == TRUE)
 				{
-					/* ########################################################### */
-				/*	fprintf(stderr, "%s filtered from %s found in \"pos_tonal_accent list\", now set \"accent feature\" to \"tone\"\n",
-							posValueStr_filtered, posValueStr);
-				*/
-					/* ########################################################### */
-
 					SItemSetString(tokenItem, "accent", "tone", error);
 					if (S_CHK_ERR(error, S_CONTERR,
 						"Run",
@@ -636,31 +645,13 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 
 			if (isPunct)
 			{
-				/* get the puncutation mark as a string and
+				/* get the punctation mark as a string and
 				 * set isStopPunct flag if it is ".", "?" or "!" */
-				/*  *if it is a '.' --> set "decl" type
-				    *if it is a '!' --> set "excl" type
-           		    *if it is a '?' --> set "interrog" type
-           		*/
 				const char *punctStr = SItemGetName(tokenItem, error);
 				if (s_strcmp(punctStr, ".", error) == 0 || s_strcmp(punctStr, "?", error) == 0 ||
 							s_strcmp(punctStr, "!", error) == 0)
 				{
 						isStopPunct = TRUE;
-						/* should I set the sentence type here? */
-						if (s_strcmp(punctStr, ".", error) == 0)
-						{
-							SItemSetString(phraseItem, "type", "decl", error);
-						}
-						else if (s_strcmp(punctStr, "?", error) == 0)
-						{
-							/* should perform other check for Y/N or W questions */
-							SItemSetString(phraseItem, "type", "interrog", error);
-						}
-						else if (s_strcmp(punctStr, "!", error) == 0)
-						{
-							SItemSetString(phraseItem, "type", "excl", error);
-						}
 				}
 			}
 
