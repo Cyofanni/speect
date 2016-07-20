@@ -470,12 +470,12 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 
 	/* loop on phraseItem, and
 	 * get the tokens for each phrase inside an inner loop,
-	 * looking at puncutation marks 
+	 * looking at puncutation marks
          */
 	while (phraseItem != NULL)
 	{
 		/* call 'getSentenceType' on 'phraseItem'
-		 * at each iteration 
+		 * at each iteration
                  */
 		SItem *wordFromCurrentPhrase = SItemPathToItem(phraseItem, "daughter", error);
 		if (S_CHK_ERR(error, S_CONTERR,
@@ -541,7 +541,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 					goto quit_error;
 
 				/* filter the current POS tag, remember to free the memory
-				 *  pointed to by 'posValueStr_filtered' pointer 
+				 *  pointed to by 'posValueStr_filtered' pointer
                                  */
 				posValueStr_filtered = filterPosTag(posValueStr, error);
 				if (S_CHK_ERR(error, S_CONTERR,
@@ -633,11 +633,11 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 
 				/* ********************************** */
 				/* FOURTH RULE:
-				 *    * if the current word item is contained in a phrase with 
+				 *    * if the current word item is contained in a phrase with
 				           type = "decl" && if "prosodicPosition"'s type == "prenuclear" && accent = "tone"
 				 * 			----> then set accent = "L+H*"
 				 *
-				 *    * else if the current word item is contained in a phrase with 
+				 *    * else if the current word item is contained in a phrase with
 					   type = "decl" && if "prosodicPosition"'s type == "nuclearNonParagraphFinal" && accent = "tone"
 				 * 			----> then set accent = "!H*"
 				 *    NOTE: "prosodicPosition" feature is not currently available on Speect
@@ -657,8 +657,8 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 
 			if (isPunct)
 			{
-				/* get the punctation mark as a string and
-				 * set isStopPunct flag if it is ".", "?" or "!" 
+				/* get the punctuation mark as a string and
+				 * set isStopPunct flag if it is ".", "?" or "!"
 				 */
 				const char *punctStr = SItemGetName(tokenItem, error);
 				if (S_CHK_ERR(error, S_CONTERR,
