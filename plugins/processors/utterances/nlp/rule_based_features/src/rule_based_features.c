@@ -646,7 +646,6 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 			}
 
 			/* END OF RULES SECTION */
-
 			/* ****************************** */
 			/* checks for inner loop */
 			s_bool isPunct = SItemFeatureIsPresent(tokenItem, "IsPunctuation", error);
