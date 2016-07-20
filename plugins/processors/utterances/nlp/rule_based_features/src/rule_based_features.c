@@ -124,6 +124,7 @@ static void Destroy(void *obj, s_erc *error)
 {
 	S_CLR_ERR(error);
 
+	S_UNUSED(obj);
 }
 
 static s_bool searchStringList(SList *list, char *str, s_erc *error)
@@ -172,14 +173,10 @@ static s_bool searchStringList(SList *list, char *str, s_erc *error)
 
 static char* filterPosTag(const char *posTagStr, s_erc *error)
 {
+	S_CLR_ERR(error);
 	char *filteredPosTagStr = malloc(sizeof(char) * 10);
-	if (s_strcmp(posTagStr, "default", error) == 0)
-	{
-		filteredPosTagStr[0] = posTagStr[0];
-		filteredPosTagStr[1] = '\0';
-	}
 
-	else if (posTagStr[0] == 'N')
+	if (posTagStr[0] == 'N')
 	{
 		int i = 0;
 
@@ -248,7 +245,7 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
 	else if (posTagStr[0] == 'S')
 	{
 		if ((posTagStr[1] == 'm' || posTagStr[1] == 'f' || posTagStr[1] == 'n') &&
-			(posTagStr[2] == 'p' || posTagStr[2] == 's' || posTagStr[2] == 'm'))
+			(posTagStr[2] == 'p' || posTagStr[2] == 's' || posTagStr[2] == 'n'))
 		{
 			filteredPosTagStr[0] = posTagStr[0];
 			filteredPosTagStr[1] = posTagStr[1];
@@ -273,13 +270,8 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
 
 	else
 	{
-		int i = 0;
-		while (posTagStr[i] != '\0')
-		{
-			filteredPosTagStr[i] = posTagStr[i];
-			i++;
-		}
-		filteredPosTagStr[i] = '\0';
+		filteredPosTagStr[0] = posTagStr[0];
+		filteredPosTagStr[1] = '\0';
 	}
 
 	return filteredPosTagStr;
@@ -396,7 +388,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 	         - ["è","ha","ho"]
 	         - ["A","B","I","N","NO","S","SA","SP","SW","V","X"]
 	 */
-	const SList *valueList = NULL;
+	SList *valueList = NULL;
 	have_symbols = SUttProcessorFeatureIsPresent(self, "list definitions", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
@@ -434,10 +426,10 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				  "Call to \"SRelationHead\" failed"))
 		goto quit_error;
 
-	SItem* phraseItem_copy = phraseItem;
+	const SItem* phraseItem_copy = phraseItem;
 	while (phraseItem_copy != NULL)
 	{
-	   setSentenceType(phraseItem_copy, error);
+	   setSentenceType((SItem*)phraseItem_copy, error);
 	   if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"setSentenceType\" failed"))
@@ -459,7 +451,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 		/* call 'getSentenceType' on 'phraseItem'
 		 * at each iteration
                  */
-		SItem *wordFromCurrentPhrase = SItemPathToItem(phraseItem, "daughter", error);
+		const SItem *wordFromCurrentPhrase = SItemPathToItem(phraseItem, "daughter", error);
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"SItemPathToItem\" failed"))
@@ -687,7 +679,7 @@ static SRuleBasedFeaturesUttProcClass RuleBasedFeaturesUttProcClass =
 		"SUttProcessor:SRuleBasedFeaturesUttProc",
 		sizeof(SRuleBasedFeaturesUttProc),
 		{ 0, 1},
-		Init,            /* init    */
+		NULL,            /* init    */
 		Destroy,         /* destroy */
 		Dispose,         /* dispose */
 		NULL,            /* compare */
@@ -695,6 +687,6 @@ static SRuleBasedFeaturesUttProcClass RuleBasedFeaturesUttProcClass =
 		NULL,            /* copy    */
 	},
 	/* SUttProcessorClass */
-	Initialize,          /* initialize */
+	NULL,                /* initialize */
 	Run                  /* run     */
 };
