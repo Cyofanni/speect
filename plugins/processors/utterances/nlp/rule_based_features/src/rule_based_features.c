@@ -41,6 +41,7 @@
 /************************************************************************************/
 
 #include "rule_based_features.h"
+#include <ctype.h>
 
 /************************************************************************************/
 /*                                                                                  */
@@ -153,7 +154,7 @@ static s_bool searchStringList(SList *list, char *str, s_erc *error)
 
 	while (itrList != NULL && found == FALSE)
 	{
-		SObject *curObj = SIteratorObject(itrList, error);
+		const SObject *curObj = SIteratorObject(itrList, error);
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "searchStringList",
 				  "Call to \"SIteratorObject\" failed"))
@@ -308,23 +309,23 @@ static char* filterPosTag(const char *posTagStr, s_erc *error)
  * 	    2) if the first part decides for "interrog" type, there should be other controls
  * 	       to establish the sentence's complete type
  * */
-static void setSentenceType(const SItem *phrase, s_erc *error)
+static void setSentenceType(SItem *phrase, s_erc *error)
 {
 	S_CLR_ERR(error);
 
 	/* types: "decl, "excl", "interrog" */
 	/* stop at sentence's last token */
-	SItem *wordFromCurrentPhrase = SItemPathToItem(phrase, "daughter", error);
+	const SItem *wordFromCurrentPhrase = SItemPathToItem(phrase, "daughter", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "setSentenceType",
 				  "Call to \"SItemPathToItem\" failed"))
-			return FALSE;
+			return;
 
 	SItem *wordAsToken = SItemAs(wordFromCurrentPhrase, "Token", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "setSentenceType",
 				  "Call to \"SItemAs\" failed"))
-			return FALSE;
+			return;
 
 	SItem *tokenItem = SItemParent(wordAsToken, error);
 
@@ -333,7 +334,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "setSentenceType",
 				  "Call to \"SItemFeatureIsPresent\" failed"))
-			return FALSE;
+			return;
 
 	s_bool isFinalPunct = FALSE;
 
@@ -343,7 +344,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "setSentenceType",
 				  "Call to \"SItemFeatureIsPresent\" failed"))
-			return FALSE;
+			return;
 
 		if (isPunct)
 		{
@@ -351,7 +352,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 			if (S_CHK_ERR(error, S_CONTERR,
 					"setSentenceType",
 					"Call to \"SItemGetName\" failed"))
-				return FALSE;
+				return;
 
 			if (s_strcmp(punctStr, ".", error) == 0)
 			{
@@ -360,7 +361,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 				if (S_CHK_ERR(error, S_CONTERR,
 						"setSentenceType",
 						"Call to \"SItemSetString\" failed"))
-					return FALSE;
+					return;
 			}
 			else if (s_strcmp(punctStr, "!", error) == 0)
 			{
@@ -369,7 +370,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 				if (S_CHK_ERR(error, S_CONTERR,
 						"setSentenceType",
 						"Call to \"SItemSetString\" failed"))
-				    return FALSE;
+				    return;
 			}
 			else if (s_strcmp(punctStr, "?", error) == 0)
 			{
@@ -378,7 +379,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 				if (S_CHK_ERR(error, S_CONTERR,
 						"setSentenceType",
 						"Call to \"SItemSetString\" failed"))
-				    return FALSE;
+				    return;
 			}
 		}
 
@@ -386,7 +387,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "setSentenceType",
 				  "Call to \"SItemNext\" failed"))
-			return FALSE;
+			return;
 
     }
 }
@@ -394,8 +395,7 @@ static void setSentenceType(const SItem *phrase, s_erc *error)
 static void Run(const SUttProcessor *self, SUtterance *utt,
 					s_erc *error)
 {
-	SRelation *wordRel = NULL;
-	SRelation *phraseRel = NULL;
+	const SRelation *phraseRel = NULL;
 	/* loop on phraseItem(s) */
 	const SItem *phraseItem = NULL;
 	s_bool have_symbols;
@@ -412,8 +412,6 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 	         - ["A","B","I","N","NO","S","SA","SP","SW","V","X"]
 	 */
 	const SList *valueList = NULL;
-	char *itemFromValueList;
-
 	have_symbols = SUttProcessorFeatureIsPresent(self, "list definitions", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
@@ -434,7 +432,6 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				  "Failed to get 'list definitions' SMap feature"))
 		goto quit_error;
 
-	wordRel = SUtteranceGetRelation(utt, "Token", error);
 	if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"SUtteranceGetRelation\" failed"))
@@ -481,17 +478,17 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"SItemPathToItem\" failed"))
-			return FALSE;
+			goto quit_error;
 		SItem *wordAsToken = SItemAs(wordFromCurrentPhrase, "Token", error);
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"SItemAs\" failed"))
-			return FALSE;
+			goto quit_error;
 		SItem *tokenItem = SItemParent(wordAsToken, error);
 		if (S_CHK_ERR(error, S_CONTERR,
 				  "Run",
 				  "Call to \"SItemParent\" failed"))
-			return FALSE;
+			goto quit_error;
 
 		/* I need a loop that stops at phraseItem-pointed phrase's final token */
 		s_bool isStopPunct = FALSE;
@@ -652,7 +649,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 			if (S_CHK_ERR(error, S_CONTERR,
 					"Run",
 					"Call to \"SItemFeatureIsPresent\" failed"))
-				return FALSE;
+				goto quit_error;
 
 			if (isPunct)
 			{
@@ -663,7 +660,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 				if (S_CHK_ERR(error, S_CONTERR,
 						"Run",
 						"Call to \"SItemGetName\" failed"))
-					return FALSE;
+					goto quit_error;
 
 				if (s_strcmp(punctStr, ".", error) == 0 || s_strcmp(punctStr, "?", error) == 0 ||
 							s_strcmp(punctStr, "!", error) == 0)
@@ -679,7 +676,7 @@ static void Run(const SUttProcessor *self, SUtterance *utt,
 		if (S_CHK_ERR(error, S_CONTERR,
 					"Run",
 					"Call to \"SItemNext\" failed"))
-				return FALSE;
+				goto quit_error;
 	}
 
 	/* error cleanup */
