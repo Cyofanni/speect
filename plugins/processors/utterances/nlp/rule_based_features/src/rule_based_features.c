@@ -113,21 +113,6 @@ S_LOCAL void _s_rule_based_features_class_free(s_erc *error)
 /*                                                                                  */
 /************************************************************************************/
 
-static void Initialize(SUttProcessor *self, const SVoice *voice, s_erc *error)
-{
-	SRuleBasedFeaturesUttProc *ruleBasedFeaturesProc = (SRuleBasedFeaturesUttProc*)self;
-
-	S_CLR_ERR(error);
-}
-
-static void Init(void *obj, s_erc *error)
-{
-	SRuleBasedFeaturesUttProc *self = obj;
-
-	S_CLR_ERR(error);
-}
-
-
 static void Dispose(void *obj, s_erc *error)
 {
 	S_CLR_ERR(error);
